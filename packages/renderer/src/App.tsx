@@ -24,6 +24,7 @@ const App = () => {
   return (
     <div className={styles.app}>
       <Routes>
+        <Route path="/" element={<Loading />} />
         <Route path="/bar" element={<Bar />} />
       </Routes>
     </div>

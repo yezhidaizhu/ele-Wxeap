@@ -1,5 +1,3 @@
 .bar {
-    padding: 8px;
-    height: 100vh;
-    background-color: aqua;
+    @apply flex flex-col items-start p-2 gap-2 h-screen shadow-lg border-r border-gray-600;
 }

@@ -6,7 +6,7 @@ import './samples/node-fetch'
 import './samples/execa'
 import img from './win.png';
 
-import { createdBar } from './windiows/index';
+import { createdBar, createdContent } from './windiows/index';
 
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith('6.1')) app.disableHardwareAcceleration()
@@ -27,7 +27,7 @@ async function createWindow() {
     width: 1200,
     height: 700,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.cjs')
+      // preload: join(__dirname, '../preload/index.cjs')
     },
   })
 
@@ -35,7 +35,7 @@ async function createWindow() {
     win.loadFile(join(__dirname, '../renderer/index.html'))
   } else {
     // // 🚧 Use ['ENV_NAME'] avoid vite:define plugin
-    const url = `http://${process.env['VITE_DEV_SERVER_HOST']}:${process.env['VITE_DEV_SERVER_PORT']}`
+    const url = `http://${process.env['VITE_DEV_SERVER_HOST']}:${process.env['VITE_DEV_SERVER_PORT']}/bar`
 
     win.loadURL(url)
     win.webContents.openDevTools()
@@ -47,12 +47,13 @@ async function createWindow() {
   })
 
   // Make all links open with the browser, not with the application
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https:')) shell.openExternal(url)
-    return { action: 'deny' }
-  })
+  // win.webContents.setWindowOpenHandler(({ url }) => {
+  //   if (url.startsWith('https:')) shell.openExternal(url)
+  //   return { action: 'deny' }
+  // })
 
   createdBar({ app, win });
+
 }
 
 let tray: Tray | null = null;
