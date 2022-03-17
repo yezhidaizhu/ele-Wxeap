@@ -122,18 +122,18 @@ export function createLogin() {
   });
 
   function createLoginView() {
-    const url = "https://oa.wxsoft.cn";
+    const url = "http://192.168.0.71/eap-dev/";
     const bView = new BrowserView({
       webPreferences: {
-        contextIsolation: true,
-        javascript: true,
-        nativeWindowOpen: true,
-        nodeIntegration: false,
-        sandbox: true,
-        webviewTag: true,
-        nodeIntegrationInSubFrames: false,
+        // contextIsolation: true,
+        // javascript: true,
+        // nativeWindowOpen: true,
+        // nodeIntegration: false,
+        // sandbox: true,
+        // webviewTag: true,
+        // nodeIntegrationInSubFrames: false,
         // enableWebSQL: false,
-        preload: join(__dirname, "../preload/index.cjs"),
+        // preload: join(__dirname, "../preload/index.cjs"),
       },
     });
 
@@ -148,7 +148,42 @@ export function createLogin() {
     });
 
     bView.webContents.loadURL(url);
-    bView.webContents.openDevTools();
+    // bView.webContents.openDevTools();
+
+    bView.webContents.on("did-finish-load", async () => {
+      bView.webContents
+        .executeJavaScript(
+          `new Promise(function (resolve, reject) {
+              setTimeout(function(){
+                try {
+                  var name = document.getElementById("EmpNo");
+                  var passwd = document.getElementById("EmpPassWord");
+                  
+                  var btn = document.getElementById("btnLogin");
+                  
+                  if(name && passwd && btn){
+                    name.value = "xxx";
+                    passwd.value = "Su123456";
+                    
+                    btn && btn.click();
+                    // 返回1，说明正常点击了一次登录
+                    // 并未确认是否已经登录完成
+                    resolve(1);
+                  }else{
+                    resolve(0);
+                  }
+                } catch (error) {
+                  resolve(0);
+                }
+              },100)
+          })`,
+          true
+        )
+        .then((res) => {
+          const url = bView.webContents.getURL();
+          console.log(url);
+        });
+    });
 
     // console.log(
     //   bView.webContents.once("dom-ready", () => {
