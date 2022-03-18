@@ -18,7 +18,7 @@ export default function Login() {
   };
 
   window.ipcRenderer?.on("login-reply", (event, arg) => {
-    console.log(arg);
+    setLoading(false);
   });
 
   return (

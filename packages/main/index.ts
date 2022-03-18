@@ -14,7 +14,7 @@ import "./samples/node-fetch";
 import "./samples/execa";
 import img from "./win.png";
 
-import { createdBar, createLogin } from "./windiows/index";
+import { createdBar, createEapWin, createLogin } from "./windiows/index";
 
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith("6.1")) app.disableHardwareAcceleration();
@@ -72,8 +72,18 @@ app.whenReady().then(() => {
   tray = new Tray(image);
   const contextMenu = Menu.buildFromTemplate([
     { label: "Item1" },
-    { label: "Item2" },
-    { label: "Item3" },
+    {
+      label: "Item2",
+      click() {
+        createEapWin();
+      },
+    },
+    {
+      label: "打开",
+      click() {
+        createEapWin();
+      },
+    },
     { type: "separator" },
     {
       label: "退出",
@@ -86,7 +96,7 @@ app.whenReady().then(() => {
 
   tray.addListener("click", function () {
     // createWindow();
-    createLogin();
+    createEapWin();
   });
   tray.addListener("right-click", function () {
     tray?.popUpContextMenu(contextMenu);

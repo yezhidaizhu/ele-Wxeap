@@ -86,6 +86,8 @@ export function createdBar(props: { win: BrowserWindow; app: App }) {
 
 const Cookie = ` .WxEAP.Session=CfDJ8AZPTDVYhSdOpTn%2FRTHV3kF52ebRlgHNzb1ZG1o81c2tIM4XzNTokGPLSN43jYblDsC1DAqRaA4JEduBm1uvoIq2cWSFCLx2NABm93s8MhRfXgbg4clU%2FOi3OB0ku7RMe0s4bqKluPoADSb9IcCuPVSaIn5aSmzp8YyrFy1UqsG%2F; .AspNetCore.Antiforgery.9TtSrW0hzOs=CfDJ8AZPTDVYhSdOpTn_RTHV3kFOqELyIXabIkIthhP3Exf-HH0LsmE_fo_b5QXdIiNWkI5kQewlR4wTB9kQFpKyeV1E-TEiG556sReYbCh7BP-IXW7ltMX9iqP3CSe4bT4vrMGXoaLLab4axotMMLuoGYA; .AspNetCore.WxEAP.UserIdentity=CfDJ8AZPTDVYhSdOpTn_RTHV3kHA3vtH7Mt57tQC1vnSi6VT05gWuPhAG-43nvzeXqrj1RFifnJE5rZSOLWuRY6DN3tfihcFro3h5TTwTI8jdd1b4b4CWW_rZU9tG7iQwo1u-yeErGaz2s7mvarN1sVDEklc0xzBBQv8Gh-kC0rYOCDqK5CNw5c-lNIU9q6iQ9w0h2UQ-tfxt3lZYOpIX8shfJMkmmFFc4gF6PSIjqrLyTFKDWEqR4n3cBV6BMKX4UKHqiqTHCISPAWrgmaws0EWv4eHbqn0G9TqX73PhR1R_ztFz16saFO2k24hqr4AOSTcS_pSnbVYd-ysk65A03L_SoDuDFK-VUr5yeddWS-DcWzOP2RwhuyH4kFF2phn-iTDcbAPXcQfUgzk9JknSbS2aF4oCi5dMSM1iQUXNChIh9epwfMX7FRLhhRQWQEru_82InzOeQSTDvDai-IzKGjmzm4x02a0UOmefxm7SFiYpD0y`;
 
+const eapUrl = "https://demo.govpm.cn/WxEAP/";
+
 // 保持一个登录窗口
 let loginWin: BrowserWindow | null = null;
 export function createLogin() {
@@ -98,8 +100,8 @@ export function createLogin() {
 
   loginWin = new BrowserWindow({
     title: "login",
-    // width: 380,
-    width: 600,
+    width: 380,
+    // width: 600,
     height: 660,
     resizable: false,
     webPreferences: {
@@ -116,25 +118,21 @@ export function createLogin() {
 
   ipcMain.on("login-msg", (event, name, passwd) => {
     console.log("login msg", name, passwd);
-    event.sender.send("login-reply", 1);
-
-    createLoginView();
+    // event.sender.send("login-reply", 1);
+    // 回复状态
+    const send = (status = 1) => event.sender.send("login-reply", status);
+    createLoginView({ send, name, passwd });
   });
 
-  function createLoginView() {
-    const url = "http://192.168.0.71/eap-dev/";
+  function createLoginView(opts: {
+    send: Function;
+    name: string;
+    passwd: string;
+  }) {
+    const { name = "", passwd = "", send = () => {} } = opts;
+    const url = eapUrl;
     const bView = new BrowserView({
-      webPreferences: {
-        // contextIsolation: true,
-        // javascript: true,
-        // nativeWindowOpen: true,
-        // nodeIntegration: false,
-        // sandbox: true,
-        // webviewTag: true,
-        // nodeIntegrationInSubFrames: false,
-        // enableWebSQL: false,
-        // preload: join(__dirname, "../preload/index.cjs"),
-      },
+      webPreferences: {},
     });
 
     loginWin?.setBrowserView(bView);
@@ -143,8 +141,8 @@ export function createLogin() {
     bView.setBounds({
       x: 0,
       y: 0,
-      width: 400,
-      height: 600,
+      width: 0,
+      height: 0,
     });
 
     bView.webContents.loadURL(url);
@@ -162,10 +160,10 @@ export function createLogin() {
                   var btn = document.getElementById("btnLogin");
                   
                   if(name && passwd && btn){
-                    name.value = "xxx";
-                    passwd.value = "Su123456";
+                    name.value = "${name}";
+                    passwd.value = "${passwd}";
                     
-                    btn && btn.click();
+                    btn.click();
                     // 返回1，说明正常点击了一次登录
                     // 并未确认是否已经登录完成
                     resolve(1);
@@ -180,24 +178,54 @@ export function createLogin() {
           true
         )
         .then((res) => {
-          const url = bView.webContents.getURL();
-          console.log(url);
+          bView.webContents.on("did-start-navigation", (e) => {
+            const url = bView.webContents.getURL();
+            console.log(res, url);
+
+            if (loginWin && res == 1 && !isLoginPage(url)) {
+              // 成功 todo
+              createEapWin();
+              loginWin?.destroy();
+              loginWin = null;
+              console.log("sussesss");
+              bView?.webContents?.removeAllListeners?.();
+            }
+          });
+        })
+        .finally(() => {
+          send(1); // 回复
         });
     });
-
-    // console.log(
-    //   bView.webContents.once("dom-ready", () => {
-    //     console.log(document);
-    //   })
-    // );
-
-    // bView.webContents.on("dom-ready", (e) => {
-    //   console.log(e);
-
-    //   // const nameDom: any = document?.getElementById("#EmpNo");
-    //   // if (nameDom) {
-    //   //   nameDom.value = 15768620102;
-    //   // }
-    // });
   }
+}
+
+export function createEapWin(opts?: { path?: string }) {
+  const { path = "" } = opts ?? {};
+  const url = eapUrl + path;
+  console.log("creat eap win");
+
+  const win = new BrowserWindow({
+    title: "Main window",
+    width: 1200,
+    height: 700,
+    show: false,
+    webPreferences: {
+      // preload: join(__dirname, '../preload/index.cjs')
+    },
+  });
+
+  win.loadURL(url);
+  win.webContents.on("did-finish-load", () => {
+    if (isLoginPage(win.webContents.getURL())) {
+      createLogin();
+      win.destroy();
+    } else {
+      win.show();
+    }
+  });
+}
+
+// 判断是否为登录界面
+function isLoginPage(url: string) {
+  return url.toLocaleLowerCase().includes("wxlogin");
 }
