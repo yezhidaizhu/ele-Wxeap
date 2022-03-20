@@ -3,8 +3,12 @@ import { Alert, Box, Button, Snackbar, Tab, Tabs } from "@mui/material";
 import store from "@/samples/electron-store";
 import SetEapUrl from "./SetEapUrl";
 import SetQuickMenu from "./SetQuickMenu";
+import queryString from "query-string";
+import { useLocation } from "react-router";
 
 export default function Setting() {
+  const locotion = useLocation();
+  const [isFromLogin, setIsFromLogin] = useState(false);
 
   const [tab, setTab] = useState(0);
   const [openAlert, setOpenAlert] = useState(false);
@@ -13,9 +17,9 @@ export default function Setting() {
 
   // const [eapUrl, setEapUrl] = useState("");
 
-  const handleTabChange = (event, newValue) => setTab(newValue);
+  const handleTabChange = (event: any, newValue: any) => setTab(newValue);
 
-  const handleAlertClose = (event, reason) => {
+  const handleAlertClose = (event: any, reason: any) => {
     if (reason === 'clickaway') { return }
     setOpenAlert(false);
   };
@@ -42,13 +46,24 @@ export default function Setting() {
     }
   }, [])
 
+  useEffect(() => {
+    const params = queryString.parse(locotion.search);
+
+    if (params?.from) {
+      setIsFromLogin(true);
+    }
+  }, []);
+
   return (
     <div className="login-wrap-bg text-gray-300">
       <div className="login-bg p-2 h-full w-full">
         <div className="text-right">
-          <Button size="small">
-            <a href="/login">Sigin In</a>
-          </Button>
+          {
+            isFromLogin &&
+            <Button size="small">
+              <a href="/login">Sigin In</a>
+            </Button>
+          }
         </div>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={tab} onChange={handleTabChange}>

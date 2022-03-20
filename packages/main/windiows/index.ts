@@ -45,20 +45,30 @@ export function createLogin() {
     // loginWin.webContents.openDevTools();
   }
 
-  ipcMain.on("login-msg", (event, userInfo) => {
+  const setLoginConfig = (event: any, userInfo: any) => {
     console.log("login msg", userInfo);
     // event.sender.send("login-reply", 1);
     const { name = "", passwd = "", keep = false } = userInfo || {};
     // 回复状态
     const send = (status = 1) => event.sender.send("login-reply", status);
     keep && saveUserInfo(userInfo);
-
     createLoginView({ send, name, passwd });
-  });
+  };
 
-  loginWin.on("closed", () => {
-    ipcMain.removeAllListeners("login-msg");
-  })
+  ipcMain.on("login-msg", setLoginConfig);
+  loginWin?.on("closed", () => ipcMain.removeListener("login-msg", setLoginConfig));
+
+  const setSettingConfig = async (event: any, config: any) => {
+    const send = (status = 1) => event.sender.send("setting-reply", status);
+    if (typeof config === 'object') {
+      await saveEapConfig(config);
+      send(1);
+    } else {
+      send(0);
+    }
+  };
+  ipcMain.on("setting-msg", setSettingConfig);
+  loginWin?.on("closed", () => ipcMain.removeListener("setting-msg", setSettingConfig));
 }
 
 // 创建exp win
@@ -139,7 +149,7 @@ export function createSettingWin() {// 保持一个登录窗口
     // SettingWin?.webContents.openDevTools();
   }
 
-  ipcMain.on("setting-msg", async (event, config) => {
+  const setConfig = async (event: any, config: any) => {
     const send = (status = 1) => event.sender.send("setting-reply", status);
     if (typeof config === 'object') {
       await saveEapConfig(config);
@@ -147,11 +157,23 @@ export function createSettingWin() {// 保持一个登录窗口
     } else {
       send(0);
     }
-  });
+  };
 
-  SettingWin?.on("closed", () => {
-    ipcMain.removeAllListeners("setting-msg");
-  })
+  ipcMain.on("setting-msg", setConfig);
+  SettingWin?.on("closed", () => ipcMain.removeListener("setting-msg", setConfig))
+
+  const setLoginConfig = (event: any, userInfo: any) => {
+    console.log("login msg", userInfo);
+    // event.sender.send("login-reply", 1);
+    const { name = "", passwd = "", keep = false } = userInfo || {};
+    // 回复状态
+    const send = (status = 1) => event.sender.send("login-reply", status);
+    keep && saveUserInfo(userInfo);
+    createLoginView({ send, name, passwd });
+  };
+
+  ipcMain.on("login-msg", setLoginConfig);
+  SettingWin?.on("closed", () => ipcMain.removeListener("login-msg", setLoginConfig));
 }
 
 

@@ -151,7 +151,7 @@ export default function Login() {
             </div>
             <div className="hr"></div>
             <div className="foot-lnk">
-              <a href="/Setting">
+              <a href="/Setting?from=login">
                 <div className="text-center text-gray-600 my-2">{eapUrl}</div>
               </a>
             </div>
