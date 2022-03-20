@@ -118,6 +118,11 @@ export async function createEapWin(opts?: { path?: string, onLoaded?: Function }
       win.show();
     }
   });
+
+  win.webContents.on("did-fail-load", () => {
+    win.destroy();
+    createLogin();
+  })
 }
 
 // 设置
@@ -263,6 +268,11 @@ async function createLoginView(opts: {
         send(1); // 回复
       });
   });
+
+  bView.webContents.on("did-fail-load", () => {
+
+
+  })
 }
 
 
