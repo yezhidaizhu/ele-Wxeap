@@ -310,6 +310,6 @@ async function saveEapConfig(config: { [x: string]: any }) {
   await store.set(eapConfigKey, { ...eapConfig, ...config });
 }
 
-async function getEapConfig() {
+export async function getEapConfig() {
   return (await store.get(eapConfigKey)) as any || { eapUrl: "" };
 }

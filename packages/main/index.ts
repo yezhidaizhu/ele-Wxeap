@@ -14,7 +14,7 @@ import "./samples/node-fetch";
 import "./samples/execa";
 import img from "./win.png";
 
-import { createEapWin, createLogin, createSettingWin } from "./windiows/index";
+import { createEapWin, getEapConfig, createSettingWin } from "./windiows/index";
 
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith("6.1")) app.disableHardwareAcceleration();
@@ -70,42 +70,56 @@ app.whenReady().then(() => {
   Menu.setApplicationMenu(null);
 
   tray = new Tray(image);
-  const contextMenu = Menu.buildFromTemplate([
-    { label: "Item1" },
-    {
-      label: "Item2",
+
+  const getContextMenu = async () => {
+    const { quickMenu = [] } = await getEapConfig() || {};
+    const _quickMenu = quickMenu.map((m: any) => ({
+      label: m?.name,
       click() {
-        createEapWin();
+        createEapWin({ path: m?.path });
+      }
+    }));
+    const contextMenu = Menu.buildFromTemplate([
+      { label: "Item1" },
+      {
+        label: "Item2",
       },
-    },
-    {
-      label: "内部短信",
-      click() {
-        createEapWin({ path: '/Frame/Message/WxMsg' });
+      { type: "separator" },
+      // {
+      //   label: "内部短信",
+      //   click() {
+      //     createEapWin({ path: '/Frame/Message/WxMsg' });
+      //   },
+      // },
+      ..._quickMenu,
+      { type: "separator" },
+      {
+        label: "设置",
+        click: () => {
+          createSettingWin();
+        },
       },
-    },
-    { type: "separator" },
-    {
-      label: "设置",
-      click: () => {
-        createSettingWin();
+      { type: "separator" },
+      {
+        label: "退出",
+        click: () => {
+          app.quit();
+        },
       },
-    },
-    { type: "separator" },
-    {
-      label: "退出",
-      click: () => {
-        app.quit();
-      },
-    },
-  ]);
-  tray.setToolTip("This is my application.");
+    ]);
+
+    return contextMenu;
+  }
+
+
+  tray.setToolTip("wxeap");
 
   tray.addListener("click", function () {
     // createWindow();
     createEapWin();
   });
-  tray.addListener("right-click", function () {
+  tray.addListener("right-click", async function () {
+    const contextMenu = await getContextMenu();
     tray?.popUpContextMenu(contextMenu);
   });
 
