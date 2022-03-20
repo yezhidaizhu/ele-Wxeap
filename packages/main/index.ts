@@ -14,7 +14,7 @@ import "./samples/node-fetch";
 import "./samples/execa";
 import img from "./win.png";
 
-import { createdBar, createEapWin, createLogin } from "./windiows/index";
+import { createEapWin, createLogin, createSettingWin } from "./windiows/index";
 
 // Disable GPU Acceleration for Windows 7
 if (release().startsWith("6.1")) app.disableHardwareAcceleration();
@@ -60,7 +60,7 @@ async function createWindow() {
   //   return { action: 'deny' }
   // })
 
-  createdBar({ app, win });
+  // createdBar({ app, win });
 }
 
 let tray: Tray | null = null;
@@ -79,9 +79,16 @@ app.whenReady().then(() => {
       },
     },
     {
-      label: "打开",
+      label: "内部短信",
       click() {
-        createEapWin();
+        createEapWin({ path: '/Frame/Message/WxMsg' });
+      },
+    },
+    { type: "separator" },
+    {
+      label: "设置",
+      click: () => {
+        createSettingWin();
       },
     },
     { type: "separator" },

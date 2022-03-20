@@ -1,92 +1,15 @@
 import { BrowserView, BrowserWindow, App, app, ipcMain } from "electron";
 import { join } from "path";
 import cookieParser from "cookie";
+import Store from 'electron-store'
+
+const store = new Store();
 
 const leftViewWidth = 0;
 
-// 创建等高固定宽度 BrowserView
-export function createdBar(props: { win: BrowserWindow; app: App }) {
-  const { win, app } = props;
-
-  // const query = `bar`;
-  // const url = `http://${process.env["VITE_DEV_SERVER_HOST"]}:${process.env["VITE_DEV_SERVER_PORT"]}/${query}`;
-  const url = "https://oa.wxsoft.cn";
-  const leftView = new BrowserView({
-    webPreferences: {
-      contextIsolation: true,
-      javascript: true,
-      nativeWindowOpen: true,
-      nodeIntegration: false,
-      sandbox: true,
-      webviewTag: true,
-      nodeIntegrationInSubFrames: false,
-      // enableWebSQL: false,
-    },
-  });
-
-  win.setBrowserView(leftView);
-
-  leftView.setBounds({
-    x: leftViewWidth,
-    y: 1,
-    width: win.getContentBounds().width - leftViewWidth,
-    height: win.getContentBounds().height,
-  });
-
-  win.on("resized", () => {
-    leftView.setBounds({
-      x: leftViewWidth,
-      y: 1,
-      width: win.getBounds().width - leftViewWidth,
-      height: win.getContentBounds().height,
-    });
-  });
-
-  const cks = cookieParser.parse(Cookie);
-  const ckArr = Object.keys(cks)?.map((key) => {
-    const value = cks[key];
-    const ck = {
-      url,
-      name: key,
-      value: value,
-    };
-    leftView.webContents.session.cookies.set(ck);
-
-    return ck;
-  });
-
-  // leftView.setAutoResize({ width: true, height: true, vertical: true })
-
-  if (app.isPackaged || process.env["DEBUG"]) {
-    leftView.webContents.loadFile(join(__dirname, "../renderer/index.html"), {
-      query: { to: "bar" },
-    });
-  } else {
-    // 🚧 Use ['ENV_NAME'] avoid vite:define plugin
-    setTimeout(() => {
-      leftView.webContents.loadURL(url, {
-        // userAgent:
-        //   "Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1",
-      });
-      leftView.webContents.openDevTools();
-    });
-
-    // leftView.webContents.session.
-  }
-
-  // leftView.webContents.addListener("dom-ready", () => {
-  //   leftView.webContents.insertCSS(`
-  //     html,body{
-  //       width: ${leftViewWidth}px !important;
-  //       overflow: hidden;
-  //     }
-  // `)
-  // })
-}
-
 const Cookie = ` .WxEAP.Session=CfDJ8AZPTDVYhSdOpTn%2FRTHV3kF52ebRlgHNzb1ZG1o81c2tIM4XzNTokGPLSN43jYblDsC1DAqRaA4JEduBm1uvoIq2cWSFCLx2NABm93s8MhRfXgbg4clU%2FOi3OB0ku7RMe0s4bqKluPoADSb9IcCuPVSaIn5aSmzp8YyrFy1UqsG%2F; .AspNetCore.Antiforgery.9TtSrW0hzOs=CfDJ8AZPTDVYhSdOpTn_RTHV3kFOqELyIXabIkIthhP3Exf-HH0LsmE_fo_b5QXdIiNWkI5kQewlR4wTB9kQFpKyeV1E-TEiG556sReYbCh7BP-IXW7ltMX9iqP3CSe4bT4vrMGXoaLLab4axotMMLuoGYA; .AspNetCore.WxEAP.UserIdentity=CfDJ8AZPTDVYhSdOpTn_RTHV3kHA3vtH7Mt57tQC1vnSi6VT05gWuPhAG-43nvzeXqrj1RFifnJE5rZSOLWuRY6DN3tfihcFro3h5TTwTI8jdd1b4b4CWW_rZU9tG7iQwo1u-yeErGaz2s7mvarN1sVDEklc0xzBBQv8Gh-kC0rYOCDqK5CNw5c-lNIU9q6iQ9w0h2UQ-tfxt3lZYOpIX8shfJMkmmFFc4gF6PSIjqrLyTFKDWEqR4n3cBV6BMKX4UKHqiqTHCISPAWrgmaws0EWv4eHbqn0G9TqX73PhR1R_ztFz16saFO2k24hqr4AOSTcS_pSnbVYd-ysk65A03L_SoDuDFK-VUr5yeddWS-DcWzOP2RwhuyH4kFF2phn-iTDcbAPXcQfUgzk9JknSbS2aF4oCi5dMSM1iQUXNChIh9epwfMX7FRLhhRQWQEru_82InzOeQSTDvDai-IzKGjmzm4x02a0UOmefxm7SFiYpD0y`;
 
-const eapUrl = "https://demo.govpm.cn/WxEAP/";
+// const eapUrl = "https://demo.govpm.cn/WxEAP/";
 
 // 保持一个登录窗口
 let loginWin: BrowserWindow | null = null;
@@ -95,6 +18,12 @@ export function createLogin() {
     loginWin?.show();
     return;
   }
+
+  // 清除eap cookie;
+  rmCookie();
+
+  console.log("to login");
+
   // // 🚧 Use ['ENV_NAME'] avoid vite:define plugin
   const url = `http://${process.env["VITE_DEV_SERVER_HOST"]}:${process.env["VITE_DEV_SERVER_PORT"]}/login`;
 
@@ -116,93 +45,28 @@ export function createLogin() {
     // loginWin.webContents.openDevTools();
   }
 
-  ipcMain.on("login-msg", (event, name, passwd) => {
-    console.log("login msg", name, passwd);
+  ipcMain.on("login-msg", (event, userInfo) => {
+    console.log("login msg", userInfo);
     // event.sender.send("login-reply", 1);
+    const { name = "", passwd = "", keep = false } = userInfo || {};
     // 回复状态
     const send = (status = 1) => event.sender.send("login-reply", status);
+    keep && saveUserInfo(userInfo);
+
     createLoginView({ send, name, passwd });
   });
 
-  function createLoginView(opts: {
-    send: Function;
-    name: string;
-    passwd: string;
-  }) {
-    const { name = "", passwd = "", send = () => {} } = opts;
-    const url = eapUrl;
-    const bView = new BrowserView({
-      webPreferences: {},
-    });
-
-    loginWin?.setBrowserView(bView);
-
-    if (!loginWin) return;
-    bView.setBounds({
-      x: 0,
-      y: 0,
-      width: 0,
-      height: 0,
-    });
-
-    bView.webContents.loadURL(url);
-    // bView.webContents.openDevTools();
-
-    bView.webContents.on("did-finish-load", async () => {
-      bView.webContents
-        .executeJavaScript(
-          `new Promise(function (resolve, reject) {
-              setTimeout(function(){
-                try {
-                  var name = document.getElementById("EmpNo");
-                  var passwd = document.getElementById("EmpPassWord");
-                  
-                  var btn = document.getElementById("btnLogin");
-                  
-                  if(name && passwd && btn){
-                    name.value = "${name}";
-                    passwd.value = "${passwd}";
-                    
-                    btn.click();
-                    // 返回1，说明正常点击了一次登录
-                    // 并未确认是否已经登录完成
-                    resolve(1);
-                  }else{
-                    resolve(0);
-                  }
-                } catch (error) {
-                  resolve(0);
-                }
-              },100)
-          })`,
-          true
-        )
-        .then((res) => {
-          bView.webContents.on("did-start-navigation", (e) => {
-            const url = bView.webContents.getURL();
-            console.log(res, url);
-
-            if (loginWin && res == 1 && !isLoginPage(url)) {
-              // 成功 todo
-              createEapWin();
-              loginWin?.destroy();
-              loginWin = null;
-              console.log("sussesss");
-              bView?.webContents?.removeAllListeners?.();
-            }
-          });
-        })
-        .finally(() => {
-          send(1); // 回复
-        });
-    });
-  }
+  loginWin.on("closed", () => {
+    ipcMain.removeAllListeners("login-msg");
+  })
 }
 
-export function createEapWin(opts?: { path?: string }) {
-  const { path = "" } = opts ?? {};
+// 创建exp win
+export async function createEapWin(opts?: { path?: string, onLoaded?: Function }) {
+  const { eapUrl = "" } = await getEapConfig();
+  const { path = "", onLoaded } = opts ?? {};
   const url = eapUrl + path;
-  console.log("creat eap win");
+  console.log("start creat eap win");
 
   const win = new BrowserWindow({
     title: "Main window",
@@ -214,8 +78,29 @@ export function createEapWin(opts?: { path?: string }) {
     },
   });
 
-  win.loadURL(url);
-  win.webContents.on("did-finish-load", () => {
+  // 注入cookie
+  const innsertCookie = async () => {
+    const cks = await getCookies();
+    cks?.map((ck: any) => {
+      const _ck = {
+        url: eapUrl,
+        name: ck.name,
+        value: ck.value,
+      };
+      win.webContents.session.cookies.set(_ck);
+    });
+  }
+
+  await innsertCookie();
+
+  setTimeout(() => {
+    win.loadURL(url).then(() => {
+      onLoaded?.(win); // 创建之后执行
+    });
+  })
+
+
+  win.webContents.on("did-finish-load", async () => {
     if (isLoginPage(win.webContents.getURL())) {
       createLogin();
       win.destroy();
@@ -225,7 +110,184 @@ export function createEapWin(opts?: { path?: string }) {
   });
 }
 
+// 设置
+let SettingWin: BrowserWindow | null = null;
+export function createSettingWin() {// 保持一个登录窗口
+  if (SettingWin && !SettingWin?.isDestroyed()) {
+    SettingWin?.show();
+    return;
+  }
+
+  // // 🚧 Use ['ENV_NAME'] avoid vite:define plugin
+  const url = `http://${process.env["VITE_DEV_SERVER_HOST"]}:${process.env["VITE_DEV_SERVER_PORT"]}/setting`;
+
+  SettingWin = new BrowserWindow({
+    title: "setting",
+    width: 380,
+    // width: 600,
+    height: 660,
+    // resizable: false,
+    webPreferences: {
+      preload: join(__dirname, "../preload/index.cjs"),
+    },
+  });
+
+  if (app.isPackaged || process.env["DEBUG"]) {
+    SettingWin?.loadFile(join(__dirname, "../renderer/index.html"));
+  } else {
+    SettingWin?.loadURL(url);
+    // SettingWin?.webContents.openDevTools();
+  }
+
+  ipcMain.on("setting-msg", async (event, config) => {
+    const send = (status = 1) => event.sender.send("setting-reply", status);
+    if (typeof config === 'object') {
+      await saveEapConfig(config);
+      send(1);
+    } else {
+      send(0);
+    }
+  });
+
+  SettingWin?.on("closed", () => {
+    ipcMain.removeAllListeners("setting-msg");
+  })
+}
+
+
+// 创建一个隐藏的窗口进行模拟登陆
+async function createLoginView(opts: {
+  send: Function;
+  name: string;
+  passwd: string;
+  onSuccess?: Function;
+}) {
+  const { eapUrl = "" } = await getEapConfig();
+  if (!eapUrl) return;
+
+  const { name = "", passwd = "", send = () => { }, onSuccess = () => { } } = opts;
+  const url = eapUrl;
+  const bView = new BrowserView({
+    webPreferences: {},
+  });
+
+  loginWin?.setBrowserView(bView);
+
+  if (!loginWin) return;
+  bView.setBounds({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  });
+
+  bView.webContents.loadURL(url);
+  // bView.webContents.openDevTools();
+
+  bView.webContents.on("did-finish-load", async () => {
+    bView.webContents
+      .executeJavaScript(
+        `new Promise(function (resolve, reject) {
+            setTimeout(function(){
+              try {
+                var name = document.getElementById("EmpNo");
+                var passwd = document.getElementById("EmpPassWord");
+                
+                var btn = document.getElementById("btnLogin");
+
+                if(name && passwd && btn){
+                  name.value = "${name}";
+                  passwd.value = "${passwd}";
+                  
+                  btn.click();
+                  // 返回1，说明正常点击了一次登录
+                  // 并未确认是否已经登录完成
+                  resolve(1);
+                }else{
+                  resolve(0);
+                }
+              } catch (error) {
+                resolve(0);
+              }
+            },100)
+        })`,
+        true
+      )
+      .then((res) => {
+        console.log("start login ...");
+
+        bView.webContents.on("did-finish-load", () => {
+          const url = bView.webContents.getURL();
+          console.log(res, url);
+
+          if (loginWin && !isLoginPage(url)) {
+            loginWin?.destroy();
+            loginWin = null;
+            bView?.webContents?.removeAllListeners?.();
+
+            // 成功登陆 todo
+            createEapWin({
+              onLoaded(win: BrowserWindow) {
+                saveCookie(win);
+                onSuccess?.();
+              }
+            });
+
+            console.log("==> login sussesss");
+          }
+        });
+      })
+      .finally(() => {
+        send(1); // 回复
+      });
+  });
+}
+
+
 // 判断是否为登录界面
 function isLoginPage(url: string) {
   return url.toLocaleLowerCase().includes("wxlogin");
+}
+
+
+// 保存eap cookie
+async function saveCookie(win: BrowserWindow) {
+  const { eapUrl = "" } = await getEapConfig();
+  if (!eapUrl) return;
+
+  const url = eapUrl;
+  win.webContents.session.cookies.get({ url }).then((cookies) => {
+    store.set("cookies", cookies);
+  }).catch((error) => {
+    console.log(error)
+  })
+}
+
+// 获取cookie
+async function getCookies() {
+  const cookies: any = await store.get("cookies") || [];
+  return cookies || [];
+}
+
+// 清除
+function rmCookie() {
+  return store.set("cookies", []);
+}
+
+// 保存用户信息
+function saveUserInfo(info: { name: string, passwd: string }) {
+  const { name = "", passwd = "" } = info || {};
+  store.set("userInfo", { name, passwd });
+}
+
+// 保存设置信息
+const eapConfigKey = "eapConfig";
+async function saveEapConfig(config: { [x: string]: any }) {
+  config = config || {};
+  const eapConfig: any = await store.get(eapConfigKey) || {};
+  await store.set(eapConfigKey, { ...eapConfig, ...config });
+}
+
+async function getEapConfig() {
+  return (await store.get(eapConfigKey)) as any || { eapUrl: "" };
 }

@@ -3,9 +3,10 @@ import { useEffect } from "react";
 import queryString from "query-string";
 import { Route, Routes, useLocation, useNavigate } from "react-router";
 
-import Bar from "@/pages/LeftBar";
 import Loading from "@/pages/Loading";
 import Login from "./pages/Login";
+import Setting from "@/pages/Setting";
+import { createTheme, ThemeProvider } from "@mui/material";
 
 const App = () => {
   const locotion = useLocation();
@@ -19,13 +20,21 @@ const App = () => {
     }
   }, []);
 
+  const darkTheme = createTheme({
+    palette: {
+      mode: 'dark',
+    },
+  });
+
   return (
     <div className={styles.app}>
-      <Routes>
-        <Route path="/" element={<Loading />} />
-        <Route path="/bar" element={<Bar />} />
-        <Route path="/login" element={<Login />} />
-      </Routes>
+      <ThemeProvider theme={darkTheme}>
+        <Routes>
+          <Route path="/" element={<Loading />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/setting" element={<Setting />} />
+        </Routes>
+      </ThemeProvider>
     </div>
   );
 };

@@ -1,32 +1,60 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Snackbar from "@mui/material/Snackbar";
 import LinearProgress from "@mui/material/LinearProgress";
 import { Button } from "@mui/material";
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import store from '@/samples/electron-store';
 
 export default function Login() {
   const [checkedIndex, setCheckedIndex] = useState(1);
   const [openForgot, setOpenForgot] = useState(false);
-  const [loading, setLoading] = useState(false); // 登录信息
-  const [name, setName] = useState(""); // 登录信息
-  const [passwd, setPasswd] = useState(""); // 登录信息
+  const [loading, setLoading] = useState(false);
+  const [showPasswd, setShowPasswd] = useState(false);
+  const [eapUrl, setEapUrl] = useState("");
+
+  const [userInfo, setUserInfo] = useState({ // 登录信息
+    name: "",
+    passwd: "",
+    keep: true,
+  });
+
+  const setInfo = (obj: any) => setUserInfo({ ...userInfo, ...obj });
 
   const handleClose = () => setOpenForgot(false);
 
   const onLogin = () => {
-    window.ipcRenderer?.send("login-msg", name, passwd);
+    window.ipcRenderer?.send("login-msg", userInfo);
     setLoading(true);
   };
 
-  window.ipcRenderer?.on("login-reply", (event, arg) => {
-    setLoading(false);
-  });
+  useEffect(() => {
+    window.ipcRenderer?.on("login-reply", (event, arg) => {
+      setLoading(false);
+    });
+    return () => {
+      window.ipcRenderer.removeAllListeners("login-reply");
+    }
+  }, [])
+
+  useEffect(() => {
+    (async () => {
+      const userInfo = await store.get("userInfo");
+      // console.log(userInfo);
+      const { name = "", passwd = "" } = userInfo || {};
+      setInfo({ name, passwd });
+      const eapConfig = await store.get("eapConfig");
+      // console.log(userInfo);
+      const { eapUrl = "" } = eapConfig || {};
+      setEapUrl(eapUrl);
+    })()
+  }, [])
 
   return (
     <div className="login-wrap">
       <div
-        className={`absolute top-0 left-0 w-full z-10 ${
-          !loading && "opacity-0"
-        }`}
+        className={`absolute top-0 left-0 w-full z-10 ${!loading && "opacity-0"
+          }`}
       >
         <LinearProgress />
       </div>
@@ -73,30 +101,40 @@ export default function Login() {
                 帐号/手机号
               </label>
               <input
-                value={name}
+                value={userInfo.name}
                 id="user"
                 type="text"
                 className="input"
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => setInfo({ name: e.target.value })}
               />
             </div>
             <div className="group ">
               <label htmlFor="pass" className="label mb-2">
                 密码
+                <span className="ml-2" onClick={() => {
+                  setShowPasswd(!showPasswd)
+                }}>
+                  {
+                    showPasswd ?
+                      <VisibilityIcon /> :
+                      <VisibilityOffIcon />
+                  }
+                </span>
               </label>
               <input
-                value={passwd}
+                value={userInfo.passwd}
                 id="pass"
-                type="password"
+                type={showPasswd ? '' : "password"}
                 className="input"
-                data-type="password"
-                onChange={(e) => setPasswd(e.target.value)}
+                onChange={(e) => setInfo({ passwd: e.target.value })}
               />
             </div>
-            <div className="group">
-              <input id="check" type="checkbox" className="check" checked />
-              <label htmlFor="check" className=" opacity-0 ">
-                <span className="icon"></span> Keep me Signed in
+            <div className="group py-4">
+              <input id="check" type="checkbox" className="check" checked={userInfo.keep} onChange={(e) => {
+                setInfo({ keep: e.target.checked })
+              }} />
+              <label htmlFor="check" >
+                <span className="icon"></span> <span className="text-gray-400 select-none">记住密码</span>
               </label>
             </div>
             <div className="group">
@@ -113,62 +151,9 @@ export default function Login() {
             </div>
             <div className="hr"></div>
             <div className="foot-lnk">
-              <a href="#forgot" onClick={() => setOpenForgot(true)}>
-                Forgot Password?
+              <a href="/Setting">
+                <div className="text-center text-gray-600 my-2">{eapUrl}</div>
               </a>
-              <Snackbar
-                open={openForgot}
-                autoHideDuration={3000}
-                message="Note archived"
-                onClose={handleClose}
-                anchorOrigin={{
-                  vertical: "top",
-                  horizontal: "center",
-                }}
-              />
-            </div>
-          </div>
-          <div className="sign-up-htm">
-            <div className="group">
-              <label htmlFor="user" className="label">
-                Username
-              </label>
-              <input id="user" type="text" className="input" />
-            </div>
-            <div className="group">
-              <label htmlFor="pass" className="label">
-                Password
-              </label>
-              <input
-                id="pass"
-                type="password"
-                className="input"
-                data-type="password"
-              />
-            </div>
-            <div className="group">
-              <label htmlFor="pass" className="label">
-                Repeat Password
-              </label>
-              <input
-                id="pass"
-                type="password"
-                className="input"
-                data-type="password"
-              />
-            </div>
-            <div className="group">
-              <label htmlFor="pass" className="label">
-                Email Address
-              </label>
-              <input id="pass" type="text" className="input" />
-            </div>
-            <div className="group">
-              <input type="submit" className="button" value="Sign Up" />
-            </div>
-            <div className="hr"></div>
-            <div className="foot-lnk">
-              <label htmlFor="tab-1">Already Member?</label>
             </div>
           </div>
         </div>
